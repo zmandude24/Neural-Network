@@ -9,8 +9,6 @@ namespace KNN
         public string output = "";
 
         public double distance = double.NaN;
-
-
     }
 
     class KNN_Program
@@ -20,7 +18,15 @@ namespace KNN
             return Math.Pow(x, 3) - x;
         }
 
-        private static Node getNewNode(
+        private static string GetNodeOutput(double x, double y)
+        {
+            if (f(x) >= y)
+                return "red";
+            else
+                return "blue";
+        }
+
+        private static Node GetNewNode(
             double[] x_range, double[] y_range)
         {
             Node newNode = new Node();
@@ -35,7 +41,7 @@ namespace KNN
             return newNode;
         }
 
-        private static List<Node> getTrainingNodes(
+        private static List<Node> GetTrainingNodes(
             double[] x_range, double[] y_range, int n)
         {
             List<Node> trainingNodes = new List<Node>();
@@ -43,7 +49,7 @@ namespace KNN
             for (int i = 0; i < n; i++)
             {
                 // Set Random Inputs
-                Node newNode = getNewNode(x_range, y_range);
+                Node newNode = GetNewNode(x_range, y_range);
 
                 // Set Correct Output
                 if (f(newNode.x) >= newNode.y)
@@ -58,16 +64,16 @@ namespace KNN
             return trainingNodes;
         }
 
-        private static List<Node> getKnnNodes(List<Node> trainingNodes,
-            Node testNode, int k)
+        private static List<Node> GetKnnNodes(List<Node> trainingNodes,
+            Node sampleNode, int k)
         {
             List<Node> knnNodes = new List<Node>();
 
             // Set Distances
             for (int i = 0; i < trainingNodes.Count; i++)
             {
-                trainingNodes[i].distance = getDistance(
-                    trainingNodes[i], testNode);
+                trainingNodes[i].distance = GetDistance(
+                    trainingNodes[i], sampleNode);
 
                 // Is the list full?
                 if (knnNodes.Count == k)
@@ -90,29 +96,70 @@ namespace KNN
             return knnNodes;
         }
 
-        static void Main(string[] args)
+        private static string GetNetworkOutput(List<Node> knnNodes)
         {
-            int n = getN();
-            double[] x_range = getRange("x-axis");
-            double[] y_range = getRange("y-axis");
-            int k = getK(n);
+            List<string> outputs = new List<string>();
+            List<int> outputCounts = new List<int>();
 
-            List<Node> trainingNodes = getTrainingNodes(
-                x_range, y_range, n);
-            Node testNode = getNewNode(x_range, y_range);
-            List<Node> knn = getKnnNodes(trainingNodes, testNode, k);
+            string output = "";
+            int outputCount = 0;
 
-            Console.WriteLine("Training Node Distances:");
-            foreach (Node node in trainingNodes)
-                Console.WriteLine("distance = " + node.distance);
+            for (int i = 0; i < knnNodes.Count; i++)
+            {
+                if (!outputs.Contains(knnNodes[i].output))
+                {
+                    outputs.Add(knnNodes[i].output);
+                    outputCounts.Add(1);
+                }
+                else
+                {
+                    outputCounts[outputs.IndexOf(knnNodes[i].output)]++;
+                }
 
-            Console.WriteLine("KNN Distances:");
-            foreach (Node node in knn)
-                Console.WriteLine("distance = " + node.distance);
-            Console.WriteLine("");
+                if (outputCounts[outputs.IndexOf(knnNodes[i].output)]
+                    > outputCount)
+                {
+                    output = knnNodes[i].output;
+                    outputCount++;
+                }
+            }
+
+            return output;
         }
 
-        private static int getN()
+        static void Main(string[] args)
+        {
+            int n = GetN();
+            double[] x_range = GetRange("x-axis");
+            double[] y_range = GetRange("y-axis");
+            int k = GetK(n);
+
+            List<Node> trainingNodes = GetTrainingNodes(
+                x_range, y_range, n);
+            Node sampleNode = GetNewNode(x_range, y_range);
+            List<Node> knnNodes = GetKnnNodes(trainingNodes, sampleNode, k);
+            string networkOutput = GetNetworkOutput(knnNodes);
+            string correctOutput = GetNodeOutput(sampleNode.x, sampleNode.y);
+
+            Console.WriteLine("\nTraining Nodes:");
+            for (int i = 0; i < trainingNodes.Count; i++)
+                PrintNode(trainingNodes[i]);
+            Console.WriteLine("");
+
+            Console.WriteLine("Sample Node:");
+            PrintNode(sampleNode);
+            Console.WriteLine("");
+
+            Console.WriteLine("k Nearest Neighbor Nodes:");
+            for (int i = 0; i < knnNodes.Count; i++)
+                PrintNode(knnNodes[i]);
+            Console.WriteLine("");
+
+            Console.WriteLine("Output: " + networkOutput);
+            Console.WriteLine("Correct Output: " + correctOutput);
+        }
+
+        private static int GetN()
         {
             int n = 0;
 
@@ -138,7 +185,7 @@ namespace KNN
         }
 
         // range[0] is min and range[1] is max
-        private static double[] getRange(string coordinateLabel)
+        private static double[] GetRange(string coordinateLabel)
         {
             double[] range = { 0, 0 };
 
@@ -170,7 +217,7 @@ namespace KNN
             return range;
         }
 
-        private static int getK(int n)
+        private static int GetK(int n)
         {
             int k = 0;
 
@@ -198,10 +245,20 @@ namespace KNN
         }
 
         // euclidean distance: sqrt((x1-x2)^2 + (y1-y2)^2)
-        private static double getDistance(Node node1, Node node2)
+        private static double GetDistance(Node node1, Node node2)
         {
             return Math.Sqrt(Math.Pow(node1.x - node2.x, 2) +
                 Math.Pow(node1.y - node2.y, 2));
+        }
+
+        private static void PrintNode(Node node)
+        {
+            Console.Write("x = " + node.x + ", y = " + node.y);
+            if (node.output != "")
+                Console.Write(", output = " + node.output);
+            if (!double.IsNaN(node.distance))
+                Console.Write(", distance = " + node.distance);
+            Console.WriteLine("");
         }
     }
 }
