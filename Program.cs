@@ -1,230 +1,207 @@
 ﻿using System;
 namespace KNN
 {
-    /* A node is an input data point with coordinates
-     * and the output type */
     public class Node
     {
-        public double x { get; private set; }
-        public double y { get; private set; }
+        public double x = double.NaN;
+        public double y = double.NaN;
+
         public string output = "";
-        public Node(double x, double y) { this.x = x; this.y = y; }
-    }
 
-    public static class Grouping
-    {
-        public static string mathFunction(double x, double y)
-        {
-            double fx = Math.Pow(x, 3) - x;
-            if (fx >= y) return "red";
-            else return "blue";
-        }
-    }
+        public double distance = double.NaN;
 
-    public static class Distance
-    {
-        public static double euclidean(Node a, Node b)
-        {
-            return Math.Sqrt(Math.Pow(a.x - b.x, 2) +
-                Math.Pow(a.y - b.y, 2));
-        }
-    }
 
-    public static class Classify
-    {
-        public static string unweighted(Node[] knn)
-        {
-            string output = knn[0].output;
-            int outputNum = 0;
-            int[] outputCounts = new int[knn.Length];
-            int numOutputTypes = 0;
-            string[] outputValues = new string[knn.Length];
-            for (int i = 0; i < knn.Length; i++)
-            {
-                outputCounts[i] = 0;
-                outputValues[i] = "";
-            }
-
-            for (int i = 0; i < knn.Length; i++)
-            {
-                // Check if the output type was already found
-                int j;
-                for (j = 0; j < numOutputTypes; j++)
-                {
-                    if (outputValues[j] == knn[i].output)
-                    {
-                        outputCounts[j]++;
-                        break;
-                    }
-                }
-
-                // If not, then add the new type
-                if (j == numOutputTypes)
-                {
-                    outputCounts[j]++;
-                    outputValues[j] = knn[i].output;
-                }
-
-                // Check for new leader
-                if (outputCounts[j] > outputNum)
-                    output = outputValues[j];
-            }
-
-            return output;
-        }
     }
 
     class KNN_Program
     {
-        static void printNodes(Node[] nodes)
+        private static double f(double x)
         {
-            for (int i = 0; i < nodes.Length; i++)
-            {
-                Console.WriteLine("nodes[" + i + "]: x = " +
-                    nodes[i].x + ", y = " + nodes[i].y +
-                    ", output = " + nodes[i].output);
-            }
-            Console.WriteLine("");
+            return Math.Pow(x, 3) - x;
         }
 
-        static void printDistances(Node node, Node[] nodes,
-            string distanceAlgorithm)
+        private static Node getNewNode(
+            double[] x_range, double[] y_range)
         {
-            for (int i = 0; i < nodes.Length; i++)
-            {
-                double dist = 0;
-                switch (distanceAlgorithm)
-                {
-                    case "euclidean":
-                        dist = Distance.euclidean(node, nodes[i]);
-                        break;
+            Node newNode = new Node();
+            Random random = new Random();
 
-                    default:
-                        Console.WriteLine("Error: distanceAlgorithm " +
-                            distanceAlgorithm + " was not recognized.");
-                        break;
-                }
-
-                Console.WriteLine("nodes[" + i + "] distance is "
-                    + dist);
-            }
-            Console.WriteLine("");
-        }
-
-        /* range: 0 is the min and 1 is the max */
-        static Node getNode(double[] x_range, double[] y_range)
-        {
-            // NextDouble is between 0 and 1
-            Random rdm = new Random();
-            double x = (x_range[1] - x_range[0]) * rdm.NextDouble()
+            // Set Random Inputs
+            newNode.x = (x_range[1] - x_range[0]) * random.NextDouble()
                 + x_range[0];
-            double y = (y_range[1] - y_range[0]) * rdm.NextDouble()
+            newNode.y = (y_range[1] - y_range[0]) * random.NextDouble()
                 + y_range[0];
-            return new Node(x, y);
+
+            return newNode;
         }
 
-        /* n: the number of nodes
-         * algorithmName: the name of the method to determine
-         *      the correct output */
-        static Node[] getTrainingNodes(int n,
-            double[] x_range, double[] y_range,
-            string groupingAlgorithm)
+        private static List<Node> getTrainingNodes(
+            double[] x_range, double[] y_range, int n)
         {
-            Node[] nodes = new Node[n];
+            List<Node> trainingNodes = new List<Node>();
+
             for (int i = 0; i < n; i++)
-                nodes[i] = getNode(x_range, y_range);
-
-            switch (groupingAlgorithm)
             {
-                case "mathFunction":
-                    for (int i = 0; i < nodes.Length; i++)
-                        nodes[i].output = Grouping.mathFunction(
-                            nodes[i].x, nodes[i].y);
-                    break;
+                // Set Random Inputs
+                Node newNode = getNewNode(x_range, y_range);
 
-                default:
-                    Console.WriteLine("Error: groupingAlgorithm " +
-                        groupingAlgorithm + " was not recognized.");
-                    break;
+                // Set Correct Output
+                if (f(newNode.x) >= newNode.y)
+                    newNode.output = "red";
+                else
+                    newNode.output = "blue";
+
+                // Add to List
+                trainingNodes.Add(newNode);
             }
 
-            return nodes;
+            return trainingNodes;
         }
 
-        /* return the k nearest neighbors in an array */
-        static Node[] getKNN(Node node, Node[] trainingNodes,
-            int k, string distanceAlgorithm)
+        private static List<Node> getKnnNodes(List<Node> trainingNodes,
+            Node testNode, int k)
         {
-            Node[] knn = new Node[k];
-            double[] knn_distances = new double[k];
-            for (int i = 0; i < k; i++)
-                knn_distances[i] = double.MaxValue;
+            List<Node> knnNodes = new List<Node>();
 
-            for (int i = 0; i < trainingNodes.Length; i++)
+            // Set Distances
+            for (int i = 0; i < trainingNodes.Count; i++)
             {
-                double dist = double.MaxValue;
-                switch (distanceAlgorithm)
-                {
-                    case "euclidean":
-                        dist = Distance.euclidean(
-                            node, trainingNodes[i]);
-                        break;
+                trainingNodes[i].distance = getDistance(
+                    trainingNodes[i], testNode);
 
-                    default:
-                        Console.WriteLine("Error: distanceAlgorithm " +
-                            distanceAlgorithm + " was not recognized.");
-                        break;
-                }
-
-                if (dist < knn_distances[k - 1])
+                // Is the list full?
+                if (knnNodes.Count == k)
                 {
-                    knn_distances[k - 1] = dist;
-                    knn[k - 1] = trainingNodes[i];
-                    for (int j = k-2; j >= 0; j--)
+                    // Is the current index at one of the k lowest distances?
+                    if (trainingNodes[i].distance < knnNodes[k-1].distance)
                     {
-                        // check the node above and swap the current
-                        // indexed node if the distance is less
-                        if (knn_distances[j] > dist)
-                        {
-                            knn_distances[j+1] = knn_distances[j];
-                            knn[j + 1] = knn[j];
-
-                            knn[j] = trainingNodes[i];
-                            knn_distances[j] = dist;
-                        }
+                        knnNodes[k-1] = trainingNodes[i];
+                        knnNodes = knnNodes.OrderBy(x => x.distance).ToList();
                     }
                 }
+                // If not then just add the element and then sort the list
+                else
+                {
+                    knnNodes.Add(trainingNodes[i]);
+                    knnNodes = knnNodes.OrderBy(x => x.distance).ToList();
+                }
             }
 
-            return knn;
+            return knnNodes;
         }
 
         static void Main(string[] args)
         {
-            int n = 10;
-            int k = 3;
-            double[] x_range = { -10, 10 };
-            double[] y_range = { -10, 10 };
-            string groupingAlgorithm = "mathFunction";
-            string distanceAlgorithm = "euclidean";
+            int n = getN();
+            double[] x_range = getRange("x-axis");
+            double[] y_range = getRange("y-axis");
+            int k = getK(n);
 
-            Console.WriteLine("Starting KNN Demo\n");
+            List<Node> trainingNodes = getTrainingNodes(
+                x_range, y_range, n);
+            Node testNode = getNewNode(x_range, y_range);
+            List<Node> knn = getKnnNodes(trainingNodes, testNode, k);
 
-            Node[] trainingNodes = getTrainingNodes(n, x_range, y_range,
-                groupingAlgorithm);
-            printNodes(trainingNodes);
+            Console.WriteLine("Training Node Distances:");
+            foreach (Node node in trainingNodes)
+                Console.WriteLine("distance = " + node.distance);
 
-            Node node = getNode(x_range, y_range);
-            printDistances(node, trainingNodes, distanceAlgorithm);
+            Console.WriteLine("KNN Distances:");
+            foreach (Node node in knn)
+                Console.WriteLine("distance = " + node.distance);
+            Console.WriteLine("");
+        }
 
-            Node[] knn = getKNN(node, trainingNodes, k,
-                distanceAlgorithm);
-            printNodes(knn);
-            printDistances(node, knn, distanceAlgorithm);
+        private static int getN()
+        {
+            int n = 0;
 
-            Console.WriteLine(Classify.unweighted(knn));
-            Console.WriteLine(Grouping.mathFunction(
-                node.x, node.y));
+            while (n == 0)
+            {
+                try
+                {
+                    Console.Write("Enter the number of training data points: ");
+                    string? dummy = Console.ReadLine();
+                    int dummyInt = Convert.ToInt32(dummy);
+                    if (dummyInt <= 0)
+                        Console.WriteLine("Enter a positive value.");
+                    else
+                        n = dummyInt;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+            }
+
+            return n;
+        }
+
+        // range[0] is min and range[1] is max
+        private static double[] getRange(string coordinateLabel)
+        {
+            double[] range = { 0, 0 };
+
+            while (range[0] >= range[1])
+            {
+                try
+                {
+                    double[] dummyRange = { 0, 0 };
+
+                    Console.Write("Enter the " + coordinateLabel + " minimum: ");
+                    string? dummy = Console.ReadLine();
+                    dummyRange[0] = Convert.ToDouble(dummy);
+
+                    Console.Write("Enter the " + coordinateLabel + " maximum: ");
+                    dummy = Console.ReadLine();
+                    dummyRange[1] = Convert.ToDouble(dummy);
+
+                    if (dummyRange[0] >= dummyRange[1])
+                        Console.WriteLine("The maximum must be greater than the minimum.");
+                    else
+                        range = dummyRange;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+            }
+
+            return range;
+        }
+
+        private static int getK(int n)
+        {
+            int k = 0;
+
+            while (k == 0)
+            {
+                try
+                {
+                    Console.Write("Enter the value of k: ");
+                    string? dummy = Console.ReadLine();
+                    int dummyInt = Convert.ToInt32(dummy);
+                    if (dummyInt <= 0)
+                        Console.WriteLine("Enter a positive value.");
+                    else if (dummyInt >= n)
+                        Console.WriteLine("Value must be less than n = " + n);
+                    else
+                        k = dummyInt;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
+            }
+
+            return k;
+        }
+
+        // euclidean distance: sqrt((x1-x2)^2 + (y1-y2)^2)
+        private static double getDistance(Node node1, Node node2)
+        {
+            return Math.Sqrt(Math.Pow(node1.x - node2.x, 2) +
+                Math.Pow(node1.y - node2.y, 2));
         }
     }
 }
